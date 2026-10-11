@@ -3,7 +3,9 @@
     <html lang="ru">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
         <title>Мои флеш-карточки 🎓</title>
         <style>
             * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -29,13 +31,15 @@
             .app {
                 max-width: 640px;
                 margin: 0 auto;
-                padding: 14px 16px 24px;
-                min-height: 100vh;
+                padding: 10px 16px calc(14px + env(safe-area-inset-bottom));
+                height: 100vh;
+                height: 100dvh;   /* карточка занимает весь экран, кнопки всегда внизу */
                 display: flex;
                 flex-direction: column;
+                overflow: hidden;
             }
 
-            .top-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+            .top-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-shrink: 0; }
 
             .icon-btn {
                 background: none; border: none; color: var(--text-primary);
@@ -148,148 +152,94 @@
             .deck-progress-bar .seg.incorrect { background: var(--accent-red); }
             .deck-progress-bar .seg.remaining { background: transparent; }
 
-            /* ── Карточка ── */
+            /* ── Карточка ──
+               Сверху всегда текст на изучаемом языке.
+               Карточка разделена тонкой линией на две зоны:
+                 верхняя — тап сразу показывает картинку и перевод,
+                 нижняя — по шагам: 1-й тап картинка, 2-й тап перевод.
+               Свайп вправо — «знаю», влево — «не знаю». */
             .card {
-                background: var(--card-bg); border-radius: 28px; padding: 22px 22px 8px;
-                flex: 1; display: flex; flex-direction: column; min-height: 400px;
-                animation: fadeIn 0.35s ease-out;
+                background: var(--card-bg); border-radius: 28px; padding: 14px 18px 0;
+                flex: 1; min-height: 0; display: flex; flex-direction: column;
+                position: relative; overflow: hidden;
+                touch-action: pan-y; user-select: none; -webkit-user-select: none;
+                will-change: transform;
             }
 
-            @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+            .card.enter { animation: fadeIn 0.3s ease-out; }
+            @keyframes fadeIn { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
 
-            .card-top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+            .card-top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
             .card-counter { font-size: 14px; color: var(--text-secondary); font-weight: 500; }
-            .speak-btn {
-                background: rgba(77, 157, 255, 0.15);
-                border: none;
-                color: var(--accent-blue);
-                font-size: 17px;
-                width: 34px;
-                height: 34px;
-                border-radius: 50%;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                flex-shrink: 0;
-            }
 
-            .speak-btn:active { background: rgba(77, 157, 255, 0.3); }
-            .speak-btn.speaking { background: rgba(77, 157, 255, 0.4); }
-
-            .mode-toggle-btn {
-                background: rgba(154, 154, 162, 0.15);
-                border: none;
-                color: var(--text-secondary);
-                font-size: 15px;
-                width: 34px;
-                height: 34px;
-                border-radius: 50%;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                flex-shrink: 0;
-            }
-
-            .mode-toggle-btn:active { background: rgba(154, 154, 162, 0.3); }
-
-            /* ── Модальное окно выбора режима (с картинками / без) ── */
-            .mode-modal-overlay {
-                position: fixed;
-                inset: 0;
-                background: rgba(0,0,0,0.6);
-                z-index: 200;
-                display: none;
-                align-items: center;
-                justify-content: center;
-            }
-
-            .mode-modal-overlay.open { display: flex; }
-
-            .mode-modal {
-                background: var(--card-bg);
-                border-radius: 20px;
-                padding: 28px 24px;
-                max-width: 320px;
-                width: 85%;
-                text-align: center;
-            }
-
-            .mode-modal-title {
-                font-size: 17px;
-                font-weight: 700;
-                color: var(--text-primary);
-                margin-bottom: 20px;
-            }
-
-            .mode-modal-buttons {
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-            }
-
-            .mode-modal-btn {
-                background: var(--accent-blue);
-                color: #0c0c0e;
-                border: none;
-                padding: 14px;
-                border-radius: 14px;
-                font-size: 15px;
-                font-weight: 700;
-                cursor: pointer;
-            }
-
-            .mode-modal-btn.secondary {
-                background: #38383e;
-                color: var(--text-primary);
-            }
-
-            .card-body { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 20px 0; }
-
-            .question-text { font-size: 24px; font-weight: 500; line-height: 1.28; color: var(--text-primary); }
-
-            .image-wrap { text-align: center; margin: 18px 0 6px; }
-            .image-wrap img { max-width: 100%; max-height: 220px; border-radius: 16px; }
-
-            .answer-block {
-                margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--divider);
-                max-height: 0; overflow: hidden; opacity: 0; transition: all 0.3s ease;
-            }
-
-            .answer-block.show { max-height: 400px; opacity: 1; }
-
-            .answer-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 8px; }
-            .answer-text { font-size: 18px; font-weight: 400; color: var(--text-primary); line-height: 1.4; }
-
-            .reveal-link { text-align: center; color: var(--text-secondary); font-size: 16px; padding: 16px 0 14px; cursor: pointer; user-select: none; }
-            .reveal-link:active { opacity: 0.6; }
-
-            .nav-row { display: flex; justify-content: center; align-items: center; gap: 18px; margin-top: 20px; }
-
-            .nav-circle {
-                background: #1c1c20; border: 1.5px solid var(--divider); color: var(--accent-blue);
-                width: 60px; height: 60px; border-radius: 50%;
+            .mini-btn {
+                background: rgba(154,154,162,0.12); border: none; color: var(--text-secondary);
+                width: 34px; height: 34px; border-radius: 50%; font-size: 16px; cursor: pointer;
                 display: flex; align-items: center; justify-content: center;
-                font-size: 22px; cursor: pointer; flex-shrink: 0;
+            }
+            .mini-btn:active { background: rgba(154,154,162,0.3); }
+            .mini-btn.disabled { opacity: 0.3; pointer-events: none; }
+
+            .zone { display: flex; flex-direction: column; min-height: 0; cursor: pointer; }
+            .zone-top { flex: 1.35 1 0; padding: 6px 0 12px; }
+            .zone-bottom { flex: 1 1 0; padding: 14px 0 16px; overflow-y: auto; }
+
+            .zone-divider { height: 1px; background: var(--divider); margin: 0 -18px; flex-shrink: 0; }
+
+            .question-text {
+                font-size: 26px; font-weight: 600; line-height: 1.3; color: var(--text-primary);
+                text-align: center; padding: 6px 0; flex-shrink: 0;
+            }
+            .question-text[dir="rtl"] { font-size: 32px; line-height: 1.6; }
+            .question-text.cjk { font-size: 34px; letter-spacing: 1px; }
+
+            .image-slot { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; margin-top: 8px; }
+            .image-slot img {
+                max-width: 100%; max-height: 100%; border-radius: 16px; object-fit: contain;
+                animation: fadeIn 0.25s ease-out;
             }
 
-            .nav-circle:active { background: #29292f; }
+            .zone-hint { color: #66666e; font-size: 14px; text-align: center; margin: auto; padding: 10px; }
 
-            .nav-circle.nav-wrong {
-                width: auto; min-width: 68px; padding: 0 16px; border-radius: 30px;
-                gap: 6px; color: var(--accent-red); font-size: 18px; font-weight: 600;
+            .answer-text {
+                font-size: 21px; line-height: 1.4; color: var(--text-primary); text-align: center;
+                margin: auto 0; animation: fadeIn 0.25s ease-out;
             }
 
-            .nav-circle.nav-right {
-                width: auto; min-width: 68px; padding: 0 16px; border-radius: 30px;
-                gap: 6px; color: var(--accent-green); font-size: 18px; font-weight: 600;
+            /* Подсветка при свайпе */
+            .swipe-badge {
+                position: absolute; top: 18px; padding: 6px 14px; border-radius: 10px;
+                font-size: 18px; font-weight: 800; letter-spacing: 1px; opacity: 0;
+                pointer-events: none; border: 3px solid;
             }
+            .swipe-badge.know { left: 18px; color: var(--accent-green); border-color: var(--accent-green); transform: rotate(-12deg); }
+            .swipe-badge.dont { right: 18px; color: var(--accent-red); border-color: var(--accent-red); transform: rotate(12deg); }
 
-            .progress-bar { width: 100%; height: 3px; background: #2a2a30; border-radius: 2px; margin-top: 22px; }
+            /* ── Нижняя панель: ✕  🔊  ✓ (под большим пальцем) ── */
+            .nav-row { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 14px; }
+
+            .act {
+                background: #1c1c20; border: 1.5px solid var(--divider); cursor: pointer;
+                height: 64px; border-radius: 32px; flex: 1; max-width: 140px;
+                display: flex; align-items: center; justify-content: center; gap: 8px;
+                font-size: 22px; font-weight: 700;
+            }
+            .act:active { background: #29292f; }
+            .act small { font-size: 15px; font-weight: 600; opacity: 0.8; }
+            .act-wrong { color: var(--accent-red); }
+            .act-right { color: var(--accent-green); }
+
+            .act-speak {
+                flex: 0 0 72px; height: 72px; border-radius: 50%;
+                background: rgba(77,157,255,0.15); border-color: rgba(77,157,255,0.35);
+                color: var(--accent-blue); font-size: 28px;
+            }
+            .act-speak:active, .act-speak.speaking { background: rgba(77,157,255,0.4); }
+
+            .progress-bar { width: 100%; height: 3px; background: #2a2a30; border-radius: 2px; margin-top: 14px; flex-shrink: 0; }
             .progress-fill { height: 100%; background: var(--accent-blue); border-radius: 2px; transition: width 0.3s ease; }
 
-            .keyboard-hint { text-align: center; color: #55555c; font-size: 11px; margin-top: 14px; }
+            .keyboard-hint { text-align: center; color: #55555c; font-size: 11px; margin-top: 10px; }
 
             .results-title { text-align: center; font-size: 20px; color: var(--text-primary); margin-bottom: 22px; font-weight: 700; }
             .results-summary { display: flex; justify-content: center; gap: 34px; margin-bottom: 28px; }
@@ -310,7 +260,8 @@
             .chart-bar-fill.correct { background: var(--accent-green); }
             .chart-bar-fill.incorrect { background: var(--accent-red); }
 
-            .results-list { margin-top: 18px; max-height: 200px; overflow-y: auto; border-top: 1px solid var(--divider); padding-top: 10px; }
+            .results-wrap { padding: 10px 0 18px; overflow-y: auto; }
+            .results-list { margin-top: 18px; max-height: 220px; overflow-y: auto; border-top: 1px solid var(--divider); padding-top: 10px; }
             .results-list-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px; color: var(--text-secondary); border-bottom: 1px solid #2a2a30; }
 
             .reset-btn {
@@ -321,29 +272,24 @@
             .empty-state { text-align: center; color: var(--text-secondary); padding: 60px 20px; font-size: 15px; }
 
             @media (max-width: 420px) {
-                .card { padding: 18px 16px 6px; min-height: 340px; }
-                .question-text { font-size: 19px; }
-                .answer-text { font-size: 14px; }
-                .nav-row { gap: 10px; }
-                .nav-circle { width: 52px; height: 52px; font-size: 19px; }
-                .nav-circle.nav-wrong, .nav-circle.nav-right { min-width: 58px; padding: 0 12px; font-size: 16px; }
+                .card { padding: 12px 14px 0; }
+                .zone-divider { margin: 0 -14px; }
+                .question-text { font-size: 22px; }
+                .question-text[dir="rtl"] { font-size: 28px; }
+                .question-text.cjk { font-size: 30px; }
+                .answer-text { font-size: 18px; }
+                .nav-row { gap: 12px; }
+                .act { height: 58px; }
+                .act-speak { flex-basis: 66px; height: 66px; }
+                .keyboard-hint { display: none !important; }
             }
         </style>
     </head>
     <body>
-        <script src="data/Общее.js"></script>
+        <script src="data/Тест.js"></script>
 
         <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
-        <div class="mode-modal-overlay" id="modeModalOverlay">
-            <div class="mode-modal">
-                <div class="mode-modal-title">Как показывать карточки?</div>
-                <div class="mode-modal-buttons">
-                    <button class="mode-modal-btn" onclick="startDeckWithMode(true)">🖼️ С картинками</button>
-                    <button class="mode-modal-btn secondary" onclick="startDeckWithMode(false)">🚫 Без картинок</button>
-                </div>
-            </div>
-        </div>
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <span>📚 Мои колоды</span>
@@ -362,7 +308,7 @@
             <div class="card" id="flashcard"></div>
             <div class="nav-row" id="navRow"></div>
             <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
-            <div class="keyboard-hint" id="hint">⌨️ Стрелки — навигация · SPACE — ответ · Y/N — оценка · ESC — озвучить</div>
+            <div class="keyboard-hint" id="hint">⌨️ ↑ всё сразу · ↓ или SPACE по шагам · Y/N оценка · ←/→ листать · S озвучить</div>
         </div>
 
         <script>
@@ -372,11 +318,11 @@
             let currentGroupName = null;
             let currentDeckName = null;
             let currentCard = 0;
-            let answerShown = false;
+            let imageShown = false;    // открыта ли картинка (верхняя зона)
+            let answerShown = false;   // открыт ли перевод (нижняя зона)
+            let onResultsScreen = false;
             let deckResults = {};
             let expandedGroups = new Set();
-            let showImages = true;   // текущий режим: с картинками / без
-            let pendingDeck = null;  // колода, ожидающая выбора режима в модальном окне
 
             function deckKey(group, deck) { return group + '::' + deck; }
 
@@ -584,18 +530,7 @@
             }
 
             function selectDeck(group, deck) {
-                // Перед открытием колоды спрашиваем режим (с картинками / без)
-                pendingDeck = { group, deck };
                 closeSidebar();
-                document.getElementById('modeModalOverlay').classList.add('open');
-            }
-
-            function startDeckWithMode(withImages) {
-                showImages = withImages;
-                document.getElementById('modeModalOverlay').classList.remove('open');
-
-                const { group, deck } = pendingDeck;
-                pendingDeck = null;
 
                 currentGroupName = group;
                 currentDeckName = deck;
@@ -608,8 +543,6 @@
 
                 const arr = deckResults[key];
                 const firstUnanswered = arr.findIndex(r => r === null);
-
-                answerShown = false;
                 renderSidebar();
 
                 if (firstUnanswered === -1 && arr.length > 0) {
@@ -617,80 +550,111 @@
                     showResults();
                 } else {
                     currentCard = firstUnanswered === -1 ? 0 : firstUnanswered;
-                    document.getElementById('hint').style.display = 'block';
-                    renderCard();
+                    showCard();
                 }
             }
 
-            function toggleImagesMode() {
-                showImages = !showImages;
-                renderCard();
+            function isCJK(text) { return /[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]/.test(text); }
+
+            // Открыть новую карточку: всё скрыто, виден только текст
+            function showCard() {
+                imageShown = false;
+                answerShown = false;
+                onResultsScreen = false;
+                const hint = document.getElementById('hint');
+                hint.style.display = '';
+                renderCard(true);
             }
 
-            function renderCard() {
-                if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-
+            function renderCard(animate) {
                 const deck = currentDeck();
                 const card = deck[currentCard];
                 const cardEl = document.getElementById('flashcard');
 
                 document.getElementById('deckTitleBar').textContent = getGroupDisplayName(currentGroupName) + ' · ' + getDisplayName(deckKey(currentGroupName, currentDeckName));
 
-                let imageHtml = '';
-                if (showImages && card.image) {
-                    imageHtml = `<div class="image-wrap"><img src="${card.image}" alt=""></div>`;
-                }
-
                 const textDirection = isRTL(card.question) ? 'rtl' : 'ltr';
+                const cjkClass = isCJK(card.question) ? 'cjk' : '';
 
+                let topContent;
+                if (!card.image) topContent = '';
+                else if (imageShown) topContent = `<div class="image-slot"><img src="${card.image}" alt=""></div>`;
+                else topContent = `<div class="zone-hint">👆 сюда — сразу картинка и перевод</div>`;
+
+                let bottomHint = '👇 сюда — сначала картинка, потом перевод';
+                if (!card.image) bottomHint = '👇 сюда — перевод';
+                else if (imageShown) bottomHint = '👇 ещё раз — перевод';
+                const bottomContent = answerShown
+                    ? `<div class="answer-text">${card.answer}</div>`
+                    : `<div class="zone-hint">${bottomHint}</div>`;
+
+                cardEl.style.transition = '';
+                cardEl.style.transform = '';
                 cardEl.innerHTML = `
                     <div class="card-top-row">
+                        <button class="mini-btn ${currentCard === 0 ? 'disabled' : ''}" onclick="previousCard()" title="Предыдущая">‹</button>
                         <span class="card-counter">${currentCard + 1} из ${deck.length}</span>
-                        <div style="display:flex;gap:6px;">
-                            <button class="mode-toggle-btn" onclick="event.stopPropagation(); toggleImagesMode()" title="Переключить картинки">${showImages ? '🖼️' : '🚫'}</button>
-                            <button class="speak-btn" id="speakBtn" onclick="event.stopPropagation(); speakCurrentCard()">🔊</button>
-                        </div>
+                        <button class="mini-btn" onclick="goNext()" title="Пропустить без оценки">›</button>
                     </div>
-                    <div class="card-body">
-                        <p class="question-text" dir="${textDirection}">${card.question}</p>
-                        ${imageHtml}
-                        <div class="answer-block" id="answerBlock">
-                            <div class="answer-label">Перевод</div>
-                            <div class="answer-text">${card.answer}</div>
-                        </div>
+                    <div class="zone zone-top" id="zoneTop">
+                        <p class="question-text ${cjkClass}" dir="${textDirection}">${card.question}</p>
+                        ${topContent}
                     </div>
-                    <div class="reveal-link">${answerShown ? 'Скрыть ответ' : 'Показать ответ'}</div>
+                    <div class="zone-divider"></div>
+                    <div class="zone zone-bottom" id="zoneBottom">${bottomContent}</div>
+                    <div class="swipe-badge know" id="badgeKnow">ЗНАЮ</div>
+                    <div class="swipe-badge dont" id="badgeDont">НЕ ЗНАЮ</div>
                 `;
 
-                if (answerShown) cardEl.querySelector('#answerBlock').classList.add('show');
-
-                // Вся карточка кликабельна — нажатие в любом месте показывает/скрывает ответ
-                // (кроме кнопок навигации снизу — они в отдельном блоке #navRow)
-                cardEl.onclick = toggleAnswer;
+                if (animate) {
+                    cardEl.classList.remove('enter');
+                    void cardEl.offsetWidth;   // перезапуск анимации появления
+                    cardEl.classList.add('enter');
+                }
 
                 document.getElementById('progress').style.width = (((currentCard + 1) / deck.length) * 100) + '%';
                 renderNavRow();
             }
 
             function renderNavRow() {
-                const deck = currentDeck();
                 const arr = getResults();
                 const correct = arr.filter(r => r === true).length;
                 const incorrect = arr.filter(r => r === false).length;
-                const isLast = currentCard === deck.length - 1;
 
                 document.getElementById('navRow').innerHTML = `
-                    <button class="nav-circle nav-prev" onclick="previousCard()" ${currentCard === 0 ? 'style="opacity:0.35;pointer-events:none;"' : ''}>←</button>
-                    <button class="nav-circle nav-wrong" onclick="rate(false)"><span>✕</span><span>${incorrect}</span></button>
-                    <button class="nav-circle nav-right" onclick="rate(true)"><span>✓</span><span>${correct}</span></button>
-                    <button class="nav-circle nav-next" onclick="goNext()">${isLast ? '🏁' : '→'}</button>
+                    <button class="act act-wrong" onclick="rate(false)">✕ <small>${incorrect}</small></button>
+                    <button class="act act-speak" id="speakBtn" onclick="speakCurrentCard()">🔊</button>
+                    <button class="act act-right" onclick="rate(true)">✓ <small>${correct}</small></button>
                 `;
             }
 
-            function toggleAnswer() { answerShown = !answerShown; renderCard(); }
+            // Верхняя зона: сразу всё — картинка и перевод (повторный тап скрывает)
+            function tapTop() {
+                const card = currentDeck()[currentCard];
+                const allShown = answerShown && (imageShown || !card.image);
+                imageShown = !allShown && !!card.image;
+                answerShown = !allShown;
+                renderCard(false);
+            }
+
+            // Нижняя зона: по шагам — текст → картинка → перевод
+            function tapBottom() { revealNextStep(); }
+
+            // Тоже по шагам (нижняя зона и SPACE)
+            function revealNextStep() {
+                const card = currentDeck()[currentCard];
+                if (card.image && !imageShown) imageShown = true;
+                else if (!answerShown) answerShown = true;
+                else { imageShown = false; answerShown = false; }
+                renderCard(false);
+            }
+
+            let ratingInProgress = false;
 
             function rate(knewIt) {
+                if (onResultsScreen || ratingInProgress) return;
                 getResults()[currentCard] = knewIt;
+                if (navigator.vibrate) navigator.vibrate(12);
                 renderSidebar();
                 goNext();
             }
@@ -699,8 +663,7 @@
                 const deck = currentDeck();
                 if (currentCard < deck.length - 1) {
                     currentCard++;
-                    answerShown = false;
-                    renderCard();
+                    showCard();
                 } else {
                     showResults();
                 }
@@ -709,17 +672,93 @@
             function previousCard() {
                 if (currentCard > 0) {
                     currentCard--;
-                    answerShown = false;
-                    renderCard();
+                    showCard();
                 }
+            }
+
+            // ── Свайпы и тапы по карточке ──
+            // Свайп вправо — «знаю» (✓), влево — «не знаю» (✕).
+            // Короткое касание без сдвига — тап по зоне (картинка/перевод).
+            const SWIPE_THRESHOLD = 90;   // px, сколько протащить для оценки
+            let drag = null;
+
+            function setBadges(dx) {
+                const k = document.getElementById('badgeKnow');
+                const d = document.getElementById('badgeDont');
+                if (k) k.style.opacity = Math.max(0, Math.min(1, dx / SWIPE_THRESHOLD));
+                if (d) d.style.opacity = Math.max(0, Math.min(1, -dx / SWIPE_THRESHOLD));
+            }
+
+            function setupGestures() {
+                const cardEl = document.getElementById('flashcard');
+
+                cardEl.addEventListener('pointerdown', (e) => {
+                    if (onResultsScreen || ratingInProgress) return;
+                    if (e.target.closest('button')) return;
+                    if (e.pointerType === 'mouse' && e.button !== 0) return;
+                    drag = { x: e.clientX, y: e.clientY, t: Date.now(), dx: 0, moving: false, id: e.pointerId, target: e.target };
+                });
+
+                cardEl.addEventListener('pointermove', (e) => {
+                    if (!drag || e.pointerId !== drag.id) return;
+                    const dx = e.clientX - drag.x;
+                    const dy = e.clientY - drag.y;
+                    if (!drag.moving) {
+                        if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
+                            drag.moving = true;
+                            try { cardEl.setPointerCapture(e.pointerId); } catch (err) {}
+                        } else if (Math.abs(dy) > 10) {
+                            drag = null;   // вертикальное движение — прокрутка, не свайп
+                            return;
+                        } else return;
+                    }
+                    drag.dx = dx;
+                    cardEl.style.transition = 'none';
+                    cardEl.style.transform = `translateX(${dx}px) rotate(${dx / 22}deg)`;
+                    setBadges(dx);
+                });
+
+                const finish = (e, cancelled) => {
+                    if (!drag || e.pointerId !== drag.id) return;
+                    const d = drag;
+                    drag = null;
+
+                    if (!d.moving) {
+                        if (cancelled) return;
+                        // Тап: какая зона?
+                        if (d.target.closest('#zoneBottom')) tapBottom();
+                        else tapTop();
+                        return;
+                    }
+
+                    const velocity = Math.abs(d.dx) / Math.max(1, Date.now() - d.t);
+                    const passed = !cancelled && (Math.abs(d.dx) > SWIPE_THRESHOLD || (Math.abs(d.dx) > 40 && velocity > 0.6));
+
+                    if (passed) {
+                        const knewIt = d.dx > 0;
+                        ratingInProgress = true;
+                        cardEl.style.transition = 'transform 0.22s ease-in';
+                        cardEl.style.transform = `translateX(${knewIt ? 130 : -130}vw) rotate(${knewIt ? 18 : -18}deg)`;
+                        setTimeout(() => {
+                            ratingInProgress = false;
+                            rate(knewIt);
+                        }, 200);
+                    } else {
+                        cardEl.style.transition = 'transform 0.2s ease-out';
+                        cardEl.style.transform = '';
+                        setBadges(0);
+                    }
+                };
+
+                cardEl.addEventListener('pointerup', (e) => finish(e, false));
+                cardEl.addEventListener('pointercancel', (e) => finish(e, true));
             }
 
             function showResults() {
                 const deck = currentDeck();
                 const arr = getResults();
+                onResultsScreen = true;
 
-                // На экране результатов карточка больше не переключает ответ
-                document.getElementById('flashcard').onclick = null;
                 const correct = arr.filter(r => r === true).length;
                 const incorrect = arr.filter(r => r === false).length;
                 const total = deck.length;
@@ -731,8 +770,11 @@
                     return `<div class="results-list-item">${icon} <span>${card.question}</span></div>`;
                 }).join('');
 
-                document.getElementById('flashcard').innerHTML = `
-                    <div style="padding-top: 10px;">
+                const cardEl = document.getElementById('flashcard');
+                cardEl.style.transition = '';
+                cardEl.style.transform = '';
+                cardEl.innerHTML = `
+                    <div class="results-wrap">
                         <div class="results-title">🎉 Колода «${getDisplayName(deckKey(currentGroupName, currentDeckName))}» пройдена!</div>
                         <div class="results-summary">
                             <div class="results-stat correct"><div class="results-stat-number">${correct}</div><div class="results-stat-label">✓ Знал</div></div>
@@ -758,20 +800,21 @@
 
             function resetDeck() {
                 currentCard = 0;
-                answerShown = false;
                 deckResults[deckKey(currentGroupName, currentDeckName)] = new Array(currentDeck().length).fill(null);
-                document.getElementById('hint').style.display = 'block';
                 renderSidebar();
-                renderCard();
+                showCard();
             }
 
             document.addEventListener('keydown', (e) => {
-                if (e.key === ' ') { e.preventDefault(); toggleAnswer(); }
+                if (onResultsScreen || !currentDeckName) return;
+                if (e.key === ' ') { e.preventDefault(); revealNextStep(); }
+                if (e.key === 'ArrowUp') { e.preventDefault(); tapTop(); }
+                if (e.key === 'ArrowDown') { e.preventDefault(); tapBottom(); }
                 if (e.key === 'ArrowRight') goNext();
                 if (e.key === 'ArrowLeft') previousCard();
                 if (e.key === 'y' || e.key === 'Y') rate(true);
                 if (e.key === 'n' || e.key === 'N') rate(false);
-                if (e.key === 'Escape') { e.preventDefault(); speakCurrentCard(); }
+                if (e.key === 's' || e.key === 'S' || e.key === 'Escape') { e.preventDefault(); speakCurrentCard(); }
             });
 
             // ── Инициализация ──
@@ -781,13 +824,16 @@
                 });
             });
 
+            setupGestures();
+
             if (groupNames.length > 0) {
                 currentGroupName = groupNames[0];
                 currentDeckName = Object.keys(ALL_DECKS[currentGroupName])[0];
                 expandedGroups.add(currentGroupName);
                 renderSidebar();
-                renderCard();
+                showCard();
             } else {
+                onResultsScreen = true;
                 document.getElementById('flashcard').innerHTML = '<div class="empty-state">Колоды не найдены.<br>Добавьте CSV файлы в decks/ и запустите ноутбук заново.</div>';
                 document.getElementById('hint').style.display = 'none';
             }
